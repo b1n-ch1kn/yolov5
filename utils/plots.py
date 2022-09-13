@@ -34,7 +34,7 @@ class Colors:
     # Ultralytics color palette https://ultralytics.com/
     def __init__(self):
         # hex = matplotlib.colors.TABLEAU_COLORS.values()
-        hexs = ('FF3838', 'FF9D97', 'FF701F', 'FFB21D', 'CFD231', '48F90A', '92CC17', '3DDB86', '1A9334', '00D4BB',
+        hexs = ('03630E', 'F20A29', 'A709E6', 'C7B302', '202EF5', '48F90A', '92CC17', '3DDB86', '1A9334', '00D4BB',
                 '2C99A8', '00C2FF', '344593', '6473FF', '0018EC', '8438FF', '520085', 'CB38FF', 'FF95C8', 'FF37C7')
         self.palette = [self.hex2rgb(f'#{c}') for c in hexs]
         self.n = len(self.palette)
@@ -69,7 +69,7 @@ def check_pil_font(font=FONT, size=10):
 
 class Annotator:
     # YOLOv5 Annotator for train/val mosaics and jpgs and detect/hub inference annotations
-    def __init__(self, im, line_width=None, font_size=None, font='Arial.ttf', pil=False, example='abc'):
+    def __init__(self, im, line_width=None, font_size=None, font='Arial.ttf', pil=False, example='abc', icon=None):
         assert im.data.contiguous, 'Image not contiguous. Apply np.ascontiguousarray(im) to Annotator() input images.'
         non_ascii = not is_ascii(example)  # non-latin labels, i.e. asian, arabic, cyrillic
         self.pil = pil or non_ascii
@@ -81,6 +81,8 @@ class Annotator:
         else:  # use cv2
             self.im = im
         self.lw = line_width or max(round(sum(im.shape) / 2 * 0.003), 2)  # line width
+
+        self.icon = icon
 
     def box_label(self, box, label='', color=(128, 128, 128), txt_color=(255, 255, 255)):
         # Add one xyxy box to image with label
@@ -104,7 +106,9 @@ class Annotator:
                 w, h = cv2.getTextSize(label, 0, fontScale=self.lw / 3, thickness=tf)[0]  # text width, height
                 outside = p1[1] - h >= 3
                 p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
-                cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
+
+                if self.icon is not None: cv2.rectangle(self.im, p1, (p2[0]+self.icon.shape[1], p2[1]), color, -1, cv2.LINE_AA)  # filled
+                else: cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
                 cv2.putText(self.im,
                             label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
                             0,
@@ -112,6 +116,37 @@ class Annotator:
                             txt_color,
                             thickness=tf,
                             lineType=cv2.LINE_AA)
+                # add icon
+                if self.icon is not None:
+                    alpha_mask = self.icon[:, :, 3] / 255.0
+                    img_overlay = self.icon[:, :, :3]
+                    coord = (p2[0], p1[1] - 24 if outside else p1[1] + h - 24)
+                    self.overlay_image_alpha(self.im, img_overlay, coord[0], coord[1], alpha_mask)
+
+    def overlay_image_alpha(self, img, img_overlay, x, y, alpha_mask):
+        """Overlay `img_overlay` onto `img` at (x, y) and blend using `alpha_mask`.
+
+        `alpha_mask` must have same HxW as `img_overlay` and values in range [0, 1].
+        """
+        # Image ranges
+        y1, y2 = max(0, y), min(img.shape[0], y + img_overlay.shape[0])
+        x1, x2 = max(0, x), min(img.shape[1], x + img_overlay.shape[1])
+
+        # Overlay ranges
+        y1o, y2o = max(0, -y), min(img_overlay.shape[0], img.shape[0] - y)
+        x1o, x2o = max(0, -x), min(img_overlay.shape[1], img.shape[1] - x)
+
+        # Exit if nothing to do
+        if y1 >= y2 or x1 >= x2 or y1o >= y2o or x1o >= x2o:
+            return
+
+        # Blend overlay within the determined ranges
+        img_crop = img[y1:y2, x1:x2]
+        img_overlay_crop = img_overlay[y1o:y2o, x1o:x2o]
+        alpha = alpha_mask[y1o:y2o, x1o:x2o, np.newaxis]
+        alpha_inv = 1.0 - alpha
+
+        img_crop[:] = alpha * img_overlay_crop + alpha_inv * img_crop
 
     def rectangle(self, xy, fill=None, outline=None, width=1):
         # Add rectangle to image (PIL-only)
