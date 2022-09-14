@@ -107,21 +107,30 @@ class Annotator:
                 outside = p1[1] - h >= 3
                 p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
 
-                if self.icon is not None: cv2.rectangle(self.im, p1, (p2[0]+self.icon.shape[1], p2[1]), color, -1, cv2.LINE_AA)  # filled
-                else: cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
-                cv2.putText(self.im,
-                            label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
-                            0,
-                            self.lw / 3,
-                            txt_color,
-                            thickness=tf,
-                            lineType=cv2.LINE_AA)
-                # add icon
-                if self.icon is not None:
+                if self.icon is not None: 
+                    cv2.rectangle(self.im, p1, (p2[0]+self.icon.shape[1], p2[1]), color, -1, cv2.LINE_AA)  # filled
+                    cv2.putText(self.im,
+                        label, (p1[0]+42, p1[1] - 2 if outside else p1[1] + h + 2),
+                        0,
+                        self.lw / 3,
+                        txt_color,
+                        thickness=tf,
+                        lineType=cv2.LINE_AA)
+
                     alpha_mask = self.icon[:, :, 3] / 255.0
                     img_overlay = self.icon[:, :, :3]
-                    coord = (p2[0], p1[1] - 24 if outside else p1[1] + h - 24)
+                    coord = (p1[0], p1[1] - 24 if outside else p1[1] + h - 24)
                     self.overlay_image_alpha(self.im, img_overlay, coord[0], coord[1], alpha_mask)
+
+                else: 
+                    cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
+                    cv2.putText(self.im,
+                        label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
+                        0,
+                        self.lw / 3,
+                        txt_color,
+                        thickness=tf,
+                        lineType=cv2.LINE_AA)
 
     def overlay_image_alpha(self, img, img_overlay, x, y, alpha_mask):
         """Overlay `img_overlay` onto `img` at (x, y) and blend using `alpha_mask`.
