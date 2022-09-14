@@ -89,13 +89,24 @@ def run(
     if (ROOT / 'icon.png').exists():
         icon_source = str(ROOT / 'icon.png')
         raw_icon = cv2.imread(icon_source, cv2.IMREAD_UNCHANGED)
-        scale_percent = 50 # percent of original size
+        cropped_image = raw_icon[:, 1:raw_icon.shape[1]-1]
+
+        grayImage = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+        (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 200, 255, cv2.THRESH_BINARY)
+        imagem = (255-blackAndWhiteImage)
+        white_icon = cv2.cvtColor(imagem, cv2.COLOR_GRAY2BGR)
+
+        _,alpha = cv2.threshold(imagem,0,255,cv2.THRESH_BINARY)
+
+        b, g, r = cv2.split(white_icon)
+        rgba = [b,g,r, alpha]
+        dst = cv2.merge(rgba,4)
+
+        scale_percent = 90 # percent of original size
         width = int(raw_icon.shape[1] * scale_percent / 100)
         height = int(raw_icon.shape[0] * scale_percent / 100)
         dim = (width, height)
-        # resize image
-        icon = cv2.resize(raw_icon, dim, interpolation = cv2.INTER_AREA)
-
+        icon = cv2.resize(dst, dim, interpolation = cv2.INTER_AREA) # resize image
 
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run

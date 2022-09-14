@@ -104,13 +104,14 @@ class Annotator:
             if label:
                 tf = max(self.lw - 1, 1)  # font thickness
                 w, h = cv2.getTextSize(label, 0, fontScale=self.lw / 3, thickness=tf)[0]  # text width, height
+                h = self.icon.shape[0]
                 outside = p1[1] - h >= 3
                 p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
 
                 if self.icon is not None: 
                     cv2.rectangle(self.im, p1, (p2[0]+self.icon.shape[1], p2[1]), color, -1, cv2.LINE_AA)  # filled
                     cv2.putText(self.im,
-                        label, (p1[0]+42, p1[1] - 2 if outside else p1[1] + h + 2),
+                        label, (p1[0]+self.icon.shape[1]+3, p1[1] - 2 if outside else p1[1] + h + 2),
                         0,
                         self.lw / 3,
                         txt_color,
@@ -119,7 +120,7 @@ class Annotator:
 
                     alpha_mask = self.icon[:, :, 3] / 255.0
                     img_overlay = self.icon[:, :, :3]
-                    coord = (p1[0], p1[1] - 24 if outside else p1[1] + h - 24)
+                    coord = (p1[0], p1[1] - self.icon.shape[0] if outside else p1[1] + h - self.icon.shape[0])
                     self.overlay_image_alpha(self.im, img_overlay, coord[0], coord[1], alpha_mask)
 
                 else: 
